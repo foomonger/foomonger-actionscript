@@ -54,6 +54,12 @@ You can abort and finish Later calls by groups by using Later.gcall() and Later.
 	The 5th argument in Later.gcall() is a uint that assigns a group to the Later object.
 	Use Later.getUniqueGroup() to ensure unique group numbers.
 
+	import com.foomonger.utils.Later;
+	
+	function foo(bar:String):void {
+	        trace(bar);
+	}
+	
 	var myGroup:uint = Later.getUniqueGroup();
 	Later.gcall(this, foo, 12, false, myGroup, "hello world");
 	Later.gcall(this, foo, 13, false, myGroup, "hello world");
@@ -182,8 +188,7 @@ package com.foomonger.utils {
 		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
 		 */
 		public static function call(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, ... args):Object {
-			var gcallArgs:Array = [obj, func, duration, useSeconds, 0];
-			gcallArgs.concat(args);
+			var gcallArgs:Array = [obj, func, duration, useSeconds, 0].concat(args);
 			return Later.gcall.apply(Later, gcallArgs);
 		}
 
