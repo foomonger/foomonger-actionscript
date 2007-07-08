@@ -10,7 +10,7 @@
 Normal use:
 	import com.foomonger.utils.Later;
 	
-	function foo(bar:String):void {
+	function foo(bar:String):Void {
 		trace("foo = " + bar);
 	}
 	Later.call(this, foo, 12, false, "hello 12 frames later");
@@ -19,7 +19,7 @@ Normal use:
 Simplest use:
 	import com.foomonger.utils.Later;
 	
-	function foobar():void {
+	function foobar():Void {
 		trace("foobar");
 	}
 	
@@ -28,7 +28,7 @@ Simplest use:
 Property setting use:
 	import com.foomonger.utils.Later;
 	
-	function traceBar():void {
+	function traceBar():Void {
 		trace("bar: " + bar);
 	}
 
@@ -54,6 +54,12 @@ You can abort and finish Later calls by groups by using Later.gcall() and Later.
 	The 5th argument in Later.gcall() is a number that assigns a group to the Later object.
 	Use Later.getUniqueGroup() to ensure unique group numbers.
 
+	import com.foomonger.utils.Later;
+	
+	function foo(bar:String):Void {
+	        trace(bar);
+	}
+	
 	var myGroup:Number = Later.getUniqueGroup();
 	Later.gcall(this, foo, 12, false, myGroup, "hello world");
 	Later.gcall(this, foo, 13, false, myGroup, "hello world");
@@ -182,8 +188,7 @@ class com.foomonger.utils.Later {
 	 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
 	 */
 	public static function call(obj:Object, func:Function, duration:Number, useSeconds:Boolean):Object {
-		var gcallArgs:Array = [obj, func, duration, useSeconds, 0];
-		gcallArgs.concat(arguments.slice(4););
+		var gcallArgs:Array = [obj, func, duration, useSeconds, 0].concat(arguments.slice(4));
 		return Later.gcall.apply(Later, gcallArgs);
 	}
 	
@@ -254,7 +259,7 @@ class com.foomonger.utils.Later {
 	 *	@param		useSeconds	true = seconds, false = frames
 	 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
 	 */
-	public static function set(obj:Object, prop:String, value:Object, duration:Number = 1, useSeconds:Boolean = false):Object {
+	public static function set(obj:Object, prop:String, value:Object, duration:Number, useSeconds:Boolean):Object {
 		return Later.gset(obj, prop, value, duration, useSeconds, 0);
 	}
 	
@@ -268,7 +273,7 @@ class com.foomonger.utils.Later {
 	 *	@param		group		Group number to assign to the call.  Default = 0.
 	 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
 	 */
-	public static function gset(obj:Object, prop:String, value:Object, duration:Number = 1, useSeconds:Boolean = false, group:Number = 0):Object {
+	public static function gset(obj:Object, prop:String, value:Object, duration:Number, useSeconds:Boolean, group:Number):Object {
 		return Later.gcall(Later, Later.setObjectProperty, duration, useSeconds, group, obj, prop, value);
 	}
 	
