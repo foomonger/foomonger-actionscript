@@ -1,14 +1,33 @@
-#summary Describes the LoadWatcher class.
+#summary Watches the consolidated loading progress of the given objects.  Available in AS2.  Soon to be available in AS3.
 
-= Introduction =
+=Example=
 
-Add your content here.
+import com.foomonger.utils.LoadWatcher;
+import mx.utils.Delegate;
+	
+var loadWatcher:LoadWatcher = new LoadWatcher();
+var my_mc:MovieClip;
+var my_xml:XML;
 
+loadWatcher.addEventListener(LoadWatcher.LOAD_PROGRESS, Delegate.create(this, onLoadProgress));
+loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE, Delegate.create(this, onLoadComplete));
+loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE_INIT, Delegate.create(this, onLoadCompleteInit));
+my_mc.createEmptyMovieClip("my_mc", 0);
+my_xml = new XML();
+my_mc.loadMovie("path/to/file.swf");
+my_xml.load("path/to/file.xml");
+loadWatcher.start(my_mc, my_xml);
 
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
-
+function onLoadProgress(evt:Object):Void {
+	var loaded:Number = evt.loadedBytes;
+	var total:Number = evt.loadedBytes;
+	var percent:Number = Math.round(evt.percentLoaded * 100); 
+	var activePercent:Number = Math.round(evt.activePercentLoaded * 100); 
+	trace(loaded + "/" + total + " = " + percent + "\t" + activePercent);
+}
+function onLoadComplete(evt:Object):Void {
+	trace("complete");
+}
+function onLoadCompleteInit(evt:Object):Void {
+	trace("complete init");
+}
