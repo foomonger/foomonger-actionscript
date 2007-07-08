@@ -1,7 +1,7 @@
 #summary Watches the consolidated loading progress of the given objects.  Available in AS2.  Soon to be available in AS3.
 
-=Example=
-
+==Example:==
+{{{
 import com.foomonger.utils.LoadWatcher;
 import mx.utils.Delegate;
 	
@@ -31,3 +31,4 @@ function onLoadComplete(evt:Object):Void {
 function onLoadCompleteInit(evt:Object):Void {
 	trace("complete init");
 }
+}}}
