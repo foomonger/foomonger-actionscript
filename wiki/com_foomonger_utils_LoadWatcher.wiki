@@ -3,7 +3,7 @@
 ==Note:==
 Not only does the LoadWatcher consolidate the loaded bytes, but it also accounts for the browser downloading a limited number of items at a time.  The `activePercent` property in the `LOAD_PROGRESS` event reflects the adjustment.  If you use the straight `percent` property which uses plain `getBytesLoaded()` and `getBytesTotal()` data, then the percent can reach 100% and drop back down when the browser has started to load the rest of the items you passed.
 
-==Example:==
+==AS2 Example:==
 {{{
 import com.foomonger.utils.LoadWatcher;
 import mx.utils.Delegate;
