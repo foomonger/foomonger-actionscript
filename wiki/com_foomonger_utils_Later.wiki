@@ -22,7 +22,7 @@ function foobar():void {
 Later.call(this, foobar);	// runs foobar 1 frame later
 }}}
 	
-===Property setting use:===
+==Property setting use:==
 {{{
 import com.foomonger.utils.Later;
 	
