@@ -63,6 +63,12 @@ Later.finish(later.Obj);
 The 5th argument in Later.gcall() is a uint that assigns a group to the Later object.
 Use Later.getUniqueGroup() to ensure unique group numbers.
 {{{
+import com.foomonger.utils.Later;
+
+function foo(bar:String):void {
+        trace(bar);
+}
+
 var myGroup:uint = Later.getUniqueGroup();
 Later.gcall(this, foo, 12, false, myGroup, "hello world");
 Later.gcall(this, foo, 13, false, myGroup, "hello world");
