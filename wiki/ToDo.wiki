@@ -1,0 +1,5 @@
+#summary To-do list.
+
+= LoadWatcher =
+* Finish AS3 version
+* Add timeout code if something takes too long to load.  Success flag?  Array of indexes which didn't load?  Timeout setting?
