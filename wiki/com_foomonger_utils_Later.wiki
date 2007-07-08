@@ -1,6 +1,4 @@
-#summary Describes the Later class.  Available in AS2 and AS3.  Examples given in AS3.
-
-= Static class used to call functions after a given amount of time.=
+#summary Static class used to call functions after a given amount of time.  Available in AS2 and AS3.  Examples given in AS3.
 
 ==Normal use:==
 {{{
