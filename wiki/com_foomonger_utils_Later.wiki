@@ -56,7 +56,7 @@ var laterObj:Object = Later.call(this, foo, 12, false, "hello 12 frames later");
 You can then pass the object to the following functions:
 {{{
 Later.abort(laterObj);
-Later.finish(later.Obj);
+Later.finish(laterObj);
 }}}
 
 ===You can abort and finish Later calls by groups by using Later.gcall() and Later.gset().===
