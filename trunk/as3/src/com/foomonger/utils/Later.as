@@ -241,7 +241,7 @@ package com.foomonger.utils {
 		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
 		 */
 		public static function exec(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
-			return Later.gcall.apply(Later, arguments);
+			return Later.gcall.apply(Later, [obj, func, duration, useSeconds, group].concat(args));
 		}
 			
 		/**
