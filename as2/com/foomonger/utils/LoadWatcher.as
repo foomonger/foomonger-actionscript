@@ -217,7 +217,7 @@ class com.foomonger.utils.LoadWatcher {
 				dispatchEvent({type:LOAD_COMPLETE});
 				_global.MovieClip.removeListener(this);
 				stopEnterFrame();
-				Later.exec(this, dispatchEvent, 1, false, 0, {type:LOAD_COMPLETE_INIT});
+				Later.call(this, dispatchEvent, 1, false, {type:LOAD_COMPLETE_INIT});
 			}
 		}
 	}

@@ -13,8 +13,8 @@ Normal use:
 	function foo(bar:String):void {
 		trace("foo = " + bar);
 	}
-	Later.exec(this, foo, 12, false, 0, "hello 12 frames later");
-	Later.exec(this, foo, 2000, true, 0, "hello 2000 milliseconds later");
+	Later.call(this, foo, 12, false, "hello 12 frames later");
+	Later.call(this, foo, 2000, true, "hello 2000 milliseconds later");
 
 Simplest use:
 	import com.foomonger.utils.Later;
@@ -23,7 +23,7 @@ Simplest use:
 		trace("foobar");
 	}
 	
-	Later.exec(this, foobar);	// runs foobar 1 frame later
+	Later.call(this, foobar);	// runs foobar 1 frame later
 	
 Property setting use:
 	import com.foomonger.utils.Later;
@@ -34,30 +34,30 @@ Property setting use:
 
 	var bar:Number = 100;
 	trace("bar: " + bar);						// outputs "bar: 100"
-	Later.set(this, "bar", 50, 5, false, 0);	// sets this.bar to 50 after 5 frames
-	Later.exec(this, traceBar, 10, false, 0);	// outputs "bar: 50"
+	Later.set(this, "bar", 50, 5, false);		// sets this.bar to 50 after 5 frames
+	Later.call(this, traceBar, 10, false);		// outputs "bar: 50"
 	
-To immediately call all functions sent to Later.exec() do this:
-	Later.finishAll(arguments.callee);
+To immediately call all functions sent to Later.call() do this:
+	Later.finishAll();
 
-To immediately abort all functions sent to Later.exec() do this:
+To immediately abort all functions sent to Later.call() do this:
 	Later.abortAll();
 
-You can also control individual calls to Later.exec() by saving the returned object:
-	var laterObj:Object = Later.exec(this, foo, 12, false, 0, "hello 12 frames later");
+You can also control individual calls to Later.call() by saving the returned object:
+	var laterObj:Object = Later.call(this, foo, 12, false, "hello 12 frames later");
 	
 You can then pass the object to the following functions:
 	Later.abort(laterObj);
-	Later.finish(later.Obj, arguments.callee);
+	Later.finish(later.Obj);
 
-You can abort and finish Later calls by groups.
-	The 5th argument is a uint that assigns a group to the Later object.
+You can abort and finish Later calls by groups by using Later.gcall() and Later.gset().
+	The 5th argument in Later.gcall() is a uint that assigns a group to the Later object.
 	Use Later.getUniqueGroup() to ensure unique group numbers.
 
 	var myGroup:uint = Later.getUniqueGroup();
-	Later.exec(this, foo, 12, false, myGroup, "hello world");
-	Later.exec(this, foo, 13, false, myGroup, "hello world");
-	Later.exec(this, foo, 14, false, 0, "hello moon");
+	Later.gcall(this, foo, 12, false, myGroup, "hello world");
+	Later.gcall(this, foo, 13, false, myGroup, "hello world");
+	Later.call(this, foo, 14, false, "hello moon");
 	Later.abortGroup(myGroup);
 	
 	This traces out only "hello moon".
@@ -124,7 +124,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 *	Runs the given later object function and clears it.  Called by setInterval in exec() for functions that use seconds.
+		 *	Runs the given later object function and clears it.  Called by setInterval in Later.call() for functions that use seconds.
 		 */
 		private static function onInterval(laterObj:Object):void {
 			executeFunction(laterObj);
@@ -178,12 +178,27 @@ package com.foomonger.utils {
 		 *	@param 		func		Function to call.
 		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
 		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@param		group		Group number to assign to the call.  Default = 0.
 		 *	@param		args		Array of arguments to pass to the given function.
 		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
 		 */
-		public static function exec(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
-	
+		public static function call(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, ... args):Object {
+			var gcallArgs:Array = [obj, func, duration, useSeconds, 0];
+			gcallArgs.concat(args);
+			return Later.gcall.apply(Later, gcallArgs);
+		}
+
+		/**
+		 *	Same as Later.call(), except that you can pass a group number.
+		 *	@param 		obj			Object where the function lives.
+		 *	@param 		func		Function to call.
+		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
+		 *	@param		useSeconds	true = seconds, false = frames
+		 *	@param		group		Group number to assign to the call.  Default = 0.		
+		 *	@param		args		Array of arguments to pass to the given function.
+		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
+		 */
+		public static function gcall(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
+
 			duration = Math.max(duration, 1);
 			
 			var laterObj:Object = new Object();
@@ -208,6 +223,21 @@ package com.foomonger.utils {
 			
 			return laterObj;
 		}
+		
+		/**
+		 *	@deprecated  Use Later.call() and Later.gcall() instead.
+		 *	Main Later class function.  Executes the given function after a given amount of time.  Arguments can also be passed.
+		 *	@param 		obj			Object where the function lives.
+		 *	@param 		func		Function to call.
+		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
+		 *	@param		useSeconds	true = seconds, false = frames
+		 *	@param		group		Group number to assign to the call.  Default = 0.
+		 *	@param		args		Array of arguments to pass to the given function.
+		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
+		 */
+		public static function exec(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
+			return Later.gcall.apply(Later, arguments);
+		}
 			
 		/**
 		 *	Set the given property with the given value after a given amount of time.
@@ -216,20 +246,33 @@ package com.foomonger.utils {
 		 *	@param		value		Value to set the property too.
 		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
 		 *	@param		useSeconds	true = seconds, false = frames
+		 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
+		 */
+		public static function set(obj:Object, prop:String, value:Object, duration:uint = 1, useSeconds:Boolean = false):Object {
+			return Later.gset(obj, prop, value, duration, useSeconds, 0);
+		}
+		
+		/**
+		 *	Same as Later.set(), except that you can pass a group number.
+		 *	@param 		obj			Object where the property lives.
+		 *	@param 		prop		Property to set.
+		 *	@param		value		Value to set the property too.
+		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
+		 *	@param		useSeconds	true = seconds, false = frames
 		 *	@param		group		Group number to assign to the call.  Default = 0.
 		 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
 		 */
-		public static function set(obj:Object, prop:String, value:Object, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0):Object {
-			return Later.exec(Later, Later.setObjectProperty, duration, useSeconds, group, obj, prop, value);
+		public static function gset(obj:Object, prop:String, value:Object, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0):Object {
+			return Later.gcall(Later, Later.setObjectProperty, duration, useSeconds, group, obj, prop, value);
 		}
 		
 		/**
 		 *	Immediately call the given later object.
-		 *	@param	laterObj	An object representing a function sent to exec().
+		 *	@param	laterObj	An object representing a function sent to Later.call().
 		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
 		 */
-		public static function finish(laterObj:Object, caller:Function):void {
-			// if finish's caller was called by Later.exec
+		public static function finish(laterObj:Object, caller:Function = null):void {
+			// if finish's caller was called by Later.call()
 			if (caller == laterObj.func) {
 				// avoid recursion, no need to do anything
 			} else {
@@ -239,10 +282,10 @@ package com.foomonger.utils {
 		}
 	
 		/**
-		 *	Immediately calls all functions sent to exec().
+		 *	Immediately calls all functions sent to Later.call().
 		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
 		 */
-		public static function finishAll(caller:Function):void {
+		public static function finishAll(caller:Function = null):void {
 			var laterObj:Object;
 	
 			// seconds
@@ -262,11 +305,11 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 *	Immediately calls all functions sent to exec() in the given group.
+		 *	Immediately calls all functions sent to Later.gcall() in the given group.
 		 *	@param	group		The number of the group to finish.
 		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
 		 */
-		public static function finishGroup(group:uint, caller:Function):void {
+		public static function finishGroup(group:uint, caller:Function = null):void {
 			var laterObj:Object;
 	
 			// seconds
@@ -291,7 +334,7 @@ package com.foomonger.utils {
 		
 		/**
 		 *	Aborts the given later object.
-		 *	@param	laterObj	An object representing a function sent to exec().
+		 *	@param	laterObj	An object representing a function sent to Later.call().
 		 */
 		public static function abort(laterObj:Object):void {
 			if (laterObj.useSeconds) {
@@ -302,7 +345,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 *	Immediately aborts all functions sent to exec().
+		 *	Immediately aborts all functions sent to Later.call().
 		 */
 		public static function abortAll():void {		
 			var laterObj:Object;
@@ -319,7 +362,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 *	Immediately aborts all functions sent to exec() in the given group.
+		 *	Immediately aborts all functions sent to Later.gcall() in the given group.
 		 *	@param	group		The number of the group to abort.
 		 */
 		public static function abortGroup(group:uint):void {		
