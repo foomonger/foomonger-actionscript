@@ -1,4 +1,5 @@
 #summary Static class used to call functions after a given amount of time.  Available in AS2 and AS3.  Examples given in AS3.
+#labels Featured,Phase-Implementation
 
 ==Normal use:==
 {{{
