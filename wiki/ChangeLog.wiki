@@ -1,6 +1,7 @@
 #labels Featured
+#Describes major changes for each download version.
 ==v1.1.0==
-  * AS3 version of !LoadWatcher created and tweaked a bit.  Tweaks reflected in AS2 version.
+  * Created AS3 version of !LoadWatcher created and tweaked a bit.  Tweaks reflected in AS2 version.
 
 ==v1.0.0==
   * Everything up on Google Code now.
