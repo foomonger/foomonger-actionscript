@@ -11,7 +11,7 @@ Called on enterframe while items are loading.
 Use can use `bytesLoaded` and `bytesTotal` from the event object, but you'll probably just use `progress`.
 
 ===LoadWatcherEvent.COMPLETE:===
-Called when everything has loaded or a timeout has occurred.  A timeout occurs if the load progress is stuck for a set duration.  The default timeout duration is 30 seconds.
+Called when everything has loaded or a timeout has occurred.  A timeout occurs if the load progress is stuck for a set duration (i.e. one of the files doesn't load).  The default timeout duration is 30 seconds.
 
 ===LoadWatcherEvent.COMPLETE_INIT:===
 Called 1 frame after a non-timeout `COMPLETE` event has dispatched.  This helps with data initialization.
