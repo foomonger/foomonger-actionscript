@@ -1,38 +1,92 @@
-#summary Watches the consolidated loading progress of the given objects.  Available in AS2.  Soon to be available in AS3.
+#summary Watches the consolidated loading progress of the given objects.  Available in AS2 and AS3
 #labels Featured,Phase-Implementation
 
 ==Note:==
-Not only does the !LoadWatcher consolidate the loaded bytes, but it also accounts for the browser downloading a limited number of items at a time.  The `activePercent` property in the `LOAD_PROGRESS` event reflects the adjustment.  If you use the straight `percent` property which uses plain `getBytesLoaded()` and `getBytesTotal()` data, then the percent can reach 100% and drop back down when the browser has started to load the rest of the items you passed.
+Not only does the !LoadWatcher consolidate the loaded bytes, but it also accounts for the browser downloading a limited number of items at a time.  The `percent` property in the `PROGRESS` event reflects the adjustment.  If you use the straight bytesLoaded/bytesTotal, then the value can reach 100% and drop back down when the browser has started to load the rest of the items you passed.
 
 ==AS2 Example:==
 {{{
+// requires an images folder with jpgs
+
 import com.foomonger.utils.LoadWatcher;
 import mx.utils.Delegate;
-	
+        
 var loadWatcher:LoadWatcher = new LoadWatcher();
-var my_mc:MovieClip;
-var my_xml:XML;
+var images:Array = new Array();
 
 loadWatcher.addEventListener(LoadWatcher.LOAD_PROGRESS, Delegate.create(this, onLoadProgress));
 loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE, Delegate.create(this, onLoadComplete));
 loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE_INIT, Delegate.create(this, onLoadCompleteInit));
-my_mc.createEmptyMovieClip("my_mc", 0);
-my_xml = new XML();
-my_mc.loadMovie("path/to/file.swf");
-my_xml.load("path/to/file.xml");
-loadWatcher.start(my_mc, my_xml);
+
+for (var i = 1088; i < 1111; i++) {
+	images.push(this.createEmptyMovieClip("image" + i.toString(), i));
+	var mc:MovieClip = MovieClip(images[images.length - 1]);
+	mc.loadMovie("images/CIMG" + i.toString() + ".JPG");
+	mc._x = i - 1088 + 10;
+	mc._y = mc._x;
+}
+
+loadWatcher.start.apply(loadWatcher, images);
 
 function onLoadProgress(evt:Object):Void {
-	var loaded:Number = evt.loadedBytes;
-	var total:Number = evt.loadedBytes;
-	var percent:Number = Math.round(evt.percentLoaded * 100); 
-	var activePercent:Number = Math.round(evt.activePercentLoaded * 100); 
-	trace(loaded + "/" + total + " = " + percent + "\t" + activePercent);
+	var loaded:Number = evt.bytesLoaded;
+	var total:Number = evt.bytesTotal;
+	var percent:Number = Math.round(evt.percent * 100); 
+	trace(loaded + "/" + total + " = " + percent);
 }
+
 function onLoadComplete(evt:Object):Void {
 	trace("complete");
+	trace("isTimedOut: " + evt.isTimedOut);
 }
+
 function onLoadCompleteInit(evt:Object):Void {
+	trace("complete init");
+}
+}}}
+
+==AS3 Example:==
+{{{
+// requires an images folder with jpgs
+
+import com.foomonger.events.LoadWatcherEvent;
+import com.foomonger.utils.LoadWatcher;
+
+import flash.display.Loader;
+import flash.net.URLRequest;
+
+var loadWatcher:LoadWatcher = new LoadWatcher();
+var images:Array = new Array();
+
+loadWatcher.addEventListener(LoadWatcherEvent.PROGRESS, onLoadProgress);
+loadWatcher.addEventListener(LoadWatcherEvent.COMPLETE, onLoadComplete);
+loadWatcher.addEventListener(LoadWatcherEvent.COMPLETE_INIT, onLoadCompleteInit);
+
+for (var i:uint = 1088; i < 1111; i++) {		
+	var loader:Loader = new Loader();
+	loader.load(new URLRequest("images/CIMG" + i.toString() + ".JPG"));
+	loader.x = i - 1088 + (10 * (i - 1088));
+	loader.y = loader.x;
+	
+	addChild(loader);
+	images.push(loader.contentLoaderInfo);
+}
+
+loadWatcher.start.apply(loadWatcher, images);
+
+function onLoadProgress(evt:LoadWatcherEvent):void {
+	var loaded:uint = evt.bytesLoaded;
+	var total:uint = evt.bytesTotal;
+	var percent:Number = Math.round(evt.percent * 100); 
+	trace(loaded + "/" + total + " = " + percent);
+}
+
+function onLoadComplete(evt:LoadWatcherEvent):void {
+	trace("complete");
+	trace("isTimedOut: " + evt.isTimedOut);
+}
+
+function onLoadCompleteInit(evt:LoadWatcherEvent):void {
 	trace("complete init");
 }
 }}}
