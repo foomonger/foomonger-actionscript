@@ -8,7 +8,7 @@ Not only does the !LoadWatcher consolidate the loaded bytes, but it also account
 
 ===LoadWatcherEvent.PROGRESS:===
 Called on enterframe while items are loading.
-Use can use `bytesLoaded` and `bytesTotal`, but you'll probably just use `progress`.
+Use can use `bytesLoaded` and `bytesTotal` from the event object, but you'll probably just use `progress`.
 
 ===LoadWatcherEvent.COMPLETE:===
 Called when everything has loaded or a timeout has occurred.  A timeout occurs if the load progress is stuck for a set duration.  The default timeout duration is 30 seconds.
