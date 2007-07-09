@@ -1,4 +1,4 @@
-#summary Watches the consolidated loading progress of the given objects.  Available in AS2 and AS3
+#summary Watches the consolidated loading progress of the given objects.  Pass any objects that have bytesLoaded and bytesTotal properties (getBytesLoaded()/getBytesTotal() for AS2).  Available in AS2 and AS3
 #labels Featured,Phase-Implementation
 
 ==Note:==
