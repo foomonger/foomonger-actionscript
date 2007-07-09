@@ -7,34 +7,40 @@
 * Description:	Watches the consolidated loading progress of the given objects.
 **********************************************************************************************
 
-Example:
+Example (requires an images folder with jpgs):
 
 import com.foomonger.utils.LoadWatcher;
 import mx.utils.Delegate;
-	
+        
 var loadWatcher:LoadWatcher = new LoadWatcher();
-var my_mc:MovieClip;
-var my_xml:XML;
+var images:Array = new Array();
 
 loadWatcher.addEventListener(LoadWatcher.LOAD_PROGRESS, Delegate.create(this, onLoadProgress));
 loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE, Delegate.create(this, onLoadComplete));
 loadWatcher.addEventListener(LoadWatcher.LOAD_COMPLETE_INIT, Delegate.create(this, onLoadCompleteInit));
-my_mc.createEmptyMovieClip("my_mc", 0);
-my_xml = new XML();
-my_mc.loadMovie("path/to/file.swf");
-my_xml.load("path/to/file.xml");
-loadWatcher.start(my_mc, my_xml);
+
+for (var i = 1088; i < 1111; i++) {
+	images.push(this.createEmptyMovieClip("image" + i.toString(), i));
+	var mc:MovieClip = MovieClip(images[images.length - 1]);
+	mc.loadMovie("images/CIMG" + i.toString() + ".JPG");
+	mc._x = i - 1088 + 10;
+	mc._y = mc._x;
+}
+
+loadWatcher.start.apply(loadWatcher, images);
 
 function onLoadProgress(evt:Object):Void {
-	var loaded:Number = evt.loadedBytes;
-	var total:Number = evt.loadedBytes;
-	var percent:Number = Math.round(evt.percentLoaded * 100); 
-	var activePercent:Number = Math.round(evt.activePercentLoaded * 100); 
-	trace(loaded + "/" + total + " = " + percent + "\t" + activePercent);
+	var loaded:Number = evt.bytesLoaded;
+	var total:Number = evt.bytesTotal;
+	var percent:Number = Math.round(evt.percent * 100); 
+	trace(loaded + "/" + total + " = " + percent);
 }
+
 function onLoadComplete(evt:Object):Void {
 	trace("complete");
+	trace("isTimedOut: " + evt.isTimedOut);
 }
+
 function onLoadCompleteInit(evt:Object):Void {
 	trace("complete init");
 }
@@ -56,8 +62,8 @@ class com.foomonger.utils.LoadWatcher {
 	/**
 	 *	Dispatched on enterFrame during loading.
 	 *	Returns an event object with the following properties:
-	 *		loadedBytes				Combined loaded bytes.
-	 *		totalBytess				Combined total bytes as available.
+	 *		bytesLoaded				Combined loaded bytes.
+	 *		bytesTotals				Combined total bytes as available.
 	 *		percentLoaded			Percentage (0 > 1) of the bytes loaded.
 	 *		activePercentLoaded		Percentage (0 > 1) of the bytes loaded, taking into account the objects whose getBytesTotal() is a valid number > 0.
 	 */
@@ -75,6 +81,10 @@ class com.foomonger.utils.LoadWatcher {
 	
 	private var __content:Array;
 	private var __lastTotals:Array;
+	private var __lastOverallLoaded:Number;
+	private var __timeout:Number = 30000;	// default 30 seconds
+	private var __isTimeoutRunning:Boolean = false;
+	private var __timeoutCaller:Object;
 	
 	function addEventListener() {}
 	function removeEventListener() {}
@@ -99,6 +109,8 @@ class com.foomonger.utils.LoadWatcher {
 	 */
 	public function start(object1, object2):Void {
 		cleanContent(arguments);
+		__lastOverallLoaded = 0;
+		__isTimeoutRunning = false;
 		startEnterFrame();
 	}
 	
@@ -107,6 +119,11 @@ class com.foomonger.utils.LoadWatcher {
 	 */
 	public function stop():Void {
 		stopEnterFrame();
+		
+		// stop the timeout just in case it's running
+		if (__isTimeoutRunning) {
+			Later.abort(__timeoutCaller);
+		}
 	}
 	
 	private function startEnterFrame():Void {
@@ -152,11 +169,11 @@ class com.foomonger.utils.LoadWatcher {
 	 *	Calculates the load progress of the given objects.  Called by the enterFrame beacon.
 	 */
 	private function onEnterFrame():Void {
-		var totalBytes:Number = 0;
-		var loadedBytes:Number = 0;
+		var bytesTotal:Number = 0;
+		var bytesLoaded:Number = 0;
 		
-		var partTotalBytes:Number = 0;
-		var partLoadedBytes:Number = 0;
+		var partBytesTotal:Number = 0;
+		var partBytesLoaded:Number = 0;
 	
 		var validObjects:Number = __content.length;
 
@@ -170,57 +187,85 @@ class com.foomonger.utils.LoadWatcher {
 		for (i = 0; i < ilen; i++) {
 			part = __content[i];
 		
-			if (part.getBytesTotal == undefined) {
-				trace("**** WARNING **** LoadWatcher.doWatch():  Content " + i + " has become invalid.");
-				partTotalBytes = 0;
-				partLoadedBytes = 0;
-			} else {
-				partLoadedBytes = part.getBytesLoaded();
-				if (isNaN(partLoadedBytes)) {
-					partLoadedBytes = 0;
-				}
-				partTotalBytes = part.getBytesTotal();
-				if (isNaN(partTotalBytes)) {
-					partTotalBytes = 0;
-				}				
+			partBytesLoaded = part.getBytesLoaded();
+			if (isNaN(partBytesLoaded)) {
+				partBytesLoaded = 0;
 			}
+			partBytesTotal = part.getBytesTotal();
+			if (isNaN(partBytesTotal)) {
+				partBytesTotal = 0;
+			}				
 
 			// total will be invalid if a part has 0 for total bytes
-			if (partTotalBytes == 0) {
+			if (partBytesTotal == 0) {
 				isValidTotal = false;
 				validObjects--;		// 1 less valid object
 			}
 			
 			// total will be invalid if a part's total bytes changes
-			if (__lastTotals[i] != partTotalBytes) {
+			if (__lastTotals[i] != partBytesTotal) {
 				isValidTotal = false;
 			}
-			__lastTotals[i] = partTotalBytes;
+			__lastTotals[i] = partBytesTotal;
 			
-			totalBytes += partTotalBytes;
-			loadedBytes += partLoadedBytes;
+			bytesTotal += partBytesTotal;
+			bytesLoaded += partBytesLoaded;
 		}
 		
 		var evt:Object = new Object();
 		evt.type = LOAD_PROGRESS;
-		evt.loadedBytes = loadedBytes;
-		evt.totalBytes = totalBytes;
-		evt.percentLoaded = (loadedBytes / totalBytes);
-		evt.activePercentLoaded = ((validObjects / __content.length) * (loadedBytes / totalBytes));
-		evt.percentLoaded = isNaN(evt.percentLoaded) ? 0 : evt.percentLoaded;
-		evt.activePercentLoaded = isNaN(evt.activePercentLoaded) ? 0 : evt.activePercentLoaded;
+		evt.bytesLoaded = bytesLoaded;
+		evt.bytesTotal = bytesTotal;
+		evt.percent = ((validObjects / __content.length) * (bytesLoaded / bytesTotal));
+		evt.percent = isNaN(evt.percent) ? 0 : evt.percent;
 		
 		dispatchEvent(evt);
+		
+		checkTimeout(bytesLoaded);
 
 		if (isValidTotal) {
-			if (loadedBytes >= totalBytes) {
-				dispatchEvent({type:LOAD_COMPLETE});
-				_global.MovieClip.removeListener(this);
-				stopEnterFrame();
+			if (bytesLoaded == bytesTotal) {
+				dispatchEvent({type:LOAD_COMPLETE, isTimedOut:false});
+				this.stop();
 				Later.call(this, dispatchEvent, 1, false, {type:LOAD_COMPLETE_INIT});
 			}
 		}
 	}
+	
+	/**
+	 *	Checks and sets the timeout time if necessary.  The watching times out if the load progress is stuck for the timeout duration.
+	 *	@param	bytesLoaded		The current bytes loaded.
+	 */
+	private function checkTimeout(bytesLoaded:Number):Void {
+		// if bytes loaded hasn't changed
+		if (__lastOverallLoaded == bytesLoaded) {
+			// if timeout timer is running
+			if (__isTimeoutRunning) {
+				// do nothing
+			} else {
+				// set the timer
+				__isTimeoutRunning = true;
+				__timeoutCaller	= Later.call(this, callTimeout, __timeout, true);
+			}
+		// if bytes loaded has changed
+		} else {
+			if (__isTimeoutRunning) {
+				// clear the timer
+				__isTimeoutRunning = false;
+				Later.abort(__timeoutCaller);
+			}
+		}
+		__lastOverallLoaded = bytesLoaded;
+	}
+
+	/**
+	 *	Stops the watching and sends the COMPLETE event with the isTimedOut flag set to true.
+	 *	Called if the load progress is stuck for the timeout duration.
+	 */
+	private function callTimeout():Void {
+		this.stop();	
+		dispatchEvent({type:LOAD_COMPLETE, isTimedOut:true});
+	}	
 	
 
 }
