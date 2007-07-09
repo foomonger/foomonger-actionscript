@@ -1,0 +1,7 @@
+#labels Featured
+==v1.1.0==
+  *AS3 version of LoadWatcher created and tweaked a bit.  Tweaks reflected in AS2 version.
+
+==v1.0.0==
+  *Everything up on Google Code now.
+  *Later.exec() is deprecated to distinguish "grouping" calls.  Now use `call()`, `gcall()`, `set()`, and `gset()`.
