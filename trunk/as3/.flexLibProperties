@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flexLibProperties version="1">
+  <includeClasses>
+    <classEntry path="com.foomonger.events.LoadWatcherEvent"/>
+    <classEntry path="com.foomonger.utils.Later"/>
+    <classEntry path="com.foomonger.utils.LoadWatcher"/>
+  </includeClasses>
+  <includeResources/>
+  <namespaceManifests/>
+</flexLibProperties>
