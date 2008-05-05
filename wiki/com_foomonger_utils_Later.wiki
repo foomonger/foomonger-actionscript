@@ -1,6 +1,8 @@
 #summary Static class used to call functions after a given amount of time.  V2 Available in AS3 only.
 #labels Featured
 
+Below is a class that shows some examples. It just calls traces, but add tween methods and you have extensive animation possibilities.
+
 {{{
 package {
 	
