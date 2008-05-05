@@ -15,6 +15,9 @@ package com.foomonger.utils {
 	import flash.utils.clearTimeout;
 	import flash.utils.setTimeout;
 	
+	/**
+	 * The Later class provides functionality to execute code after a given duration.
+	 */
 	public class Later {
 		
 		private static var _instances:Dictionary;
@@ -28,6 +31,14 @@ package com.foomonger.utils {
 		//	static functions
 		// --------------------------------------------------
 		
+		/**
+		 * Static method to get a Later instance. Returns a Later instance associated
+		 * with the given Object key. Each Later instance acts as a collection of LaterOperations, 
+		 * allowing you to abort and finish LaterOperations in logical groupings.
+		 * 
+		 * @param key Object that is used as a key within a Dictionary of Later instances.
+		 * @return Later Later instance associated with the given key.
+		 */
 		public static function getInstance(key:Object = null):Later {			
 			if (key == null) {
 				if (_anonymousKey == null) {
@@ -45,7 +56,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 * Executes the given function after a number of seconds or frames.
+		 * Same as calling Later.getInstance().call()
 		 * 
 		 * @param  func Function to call.
 		 * @param duration Number of frames or milliseconds after which to call the given function.
@@ -58,7 +69,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 * Sets the property of the given object to the given value after a number of seconds or frames.
+		 * Same as calling Later.getInstance().set()
 		 * 
 		 * @param object Object that contains the property to set.
 		 * @param propertyName Name of the property on the object to set.
@@ -72,7 +83,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 * Immediately executes the given operation.
+		 * Same as calling Later.getInstance().finishOperation()
 		 * 
 		 * @param operation LaterOperation object to execute.
 		 * @param caller Pass arguments.callee from the calling function to prevent recursion.
@@ -82,7 +93,7 @@ package com.foomonger.utils {
 		}
 		
 		/**
-		 * Aborts the given LaterOperation
+		 * Same as calling Later.getInstance().abortOperation()
 		 * 
 		 * @param operation LaterOperation object to abort.
 		 */
