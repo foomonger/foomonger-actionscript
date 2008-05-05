@@ -229,8 +229,6 @@ package com.foomonger.utils {
 			abortOperation(operation);			
 		}
 		
-		
-		private static var framecounter:uint = 0;
 		/**
 		 * Loops through the LaterOperations that use frames and executes them as neccessary.
 		 */
