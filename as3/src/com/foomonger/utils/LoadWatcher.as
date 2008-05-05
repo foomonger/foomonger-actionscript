@@ -55,31 +55,31 @@ function onLoadCompleteInit(evt:LoadWatcherEvent):void {
 package com.foomonger.utils {
 
 	import com.foomonger.events.LoadWatcherEvent;
-	import com.foomonger.utils.Later;
-
+	import com.foomonger.utils.later.LaterOperation;
+	
 	import flash.display.MovieClip;
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 
 	public class LoadWatcher extends EventDispatcher {
 	
-		private static var __mc:MovieClip = new MovieClip();
-		private var __content:Array;
-		private var __lastTotals:Array;
-		private var __lastOverallLoaded:uint;
-		private var __timeout:uint = 30000;	// default 30 seconds
-		private var __isTimeoutRunning:Boolean = false;
-		private var __timeoutCaller:Object;
-		private var __progressEvent:LoadWatcherEvent;
-		private var __completeEvent:LoadWatcherEvent;
-		private var __completeInitEvent:LoadWatcherEvent;
+		private static var _mc:MovieClip = new MovieClip();
+		private var _content:Array;
+		private var _lastTotals:Array;
+		private var _lastOverallLoaded:uint;
+		private var _timeout:uint = 30000;	// default 30 seconds
+		private var _isTimeoutRunning:Boolean = false;
+		private var _timeoutCaller:LaterOperation;
+		private var _progressEvent:LoadWatcherEvent;
+		private var _completeEvent:LoadWatcherEvent;
+		private var _completeInitEvent:LoadWatcherEvent;
 			
 		public function LoadWatcher() {
-			__content = new Array();
-			__lastTotals = new Array();
-			__progressEvent = new LoadWatcherEvent(LoadWatcherEvent.PROGRESS);
-			__completeEvent = new LoadWatcherEvent(LoadWatcherEvent.COMPLETE);
-			__completeInitEvent = new LoadWatcherEvent(LoadWatcherEvent.COMPLETE_INIT);
+			_content = new Array();
+			_lastTotals = new Array();
+			_progressEvent = new LoadWatcherEvent(LoadWatcherEvent.PROGRESS);
+			_completeEvent = new LoadWatcherEvent(LoadWatcherEvent.COMPLETE);
+			_completeInitEvent = new LoadWatcherEvent(LoadWatcherEvent.COMPLETE_INIT);
 
 		}
 		
@@ -93,8 +93,8 @@ package com.foomonger.utils {
 		 */
 		public function start(... args):void {
 			cleanContent(args);
-			__lastOverallLoaded = 0;
-			__isTimeoutRunning = false;
+			_lastOverallLoaded = 0;
+			_isTimeoutRunning = false;
 			startEnterFrame();
 		}
 		
@@ -105,8 +105,8 @@ package com.foomonger.utils {
 			stopEnterFrame();
 			
 			// stop the timeout just in case it's running
-			if (__isTimeoutRunning) {
-				Later.abort(__timeoutCaller);
+			if (_isTimeoutRunning) {
+				Later.abortOperation(_timeoutCaller);
 			}
 		}
 		
@@ -114,7 +114,7 @@ package com.foomonger.utils {
 		 * Setter for timeout.
 		 * @param	value	Timeout value in milliseconds.		 */
 		public function set timeout(value:uint):void {
-			__timeout = value;
+			_timeout = value;
 		}
 		
 		/**
@@ -122,23 +122,23 @@ package com.foomonger.utils {
 		 * @returns	uint	Current timeout value.
 		 */
 		public function get timeout():uint {
-			return __timeout;
+			return _timeout;
 		}
 		
 		private function startEnterFrame():void {
-			__mc.addEventListener(Event.ENTER_FRAME, onEnterFrame, false, 0, true);
+			_mc.addEventListener(Event.ENTER_FRAME, onEnterFrame, false, 0, true);
 		}
 		
 		private function stopEnterFrame():void {
-			__mc.removeEventListener(Event.ENTER_FRAME, onEnterFrame);
+			_mc.removeEventListener(Event.ENTER_FRAME, onEnterFrame);
 		}
 	
 		/**
 		 *	Discards any objects that are undefined or do not have a getBytesLoaded() function.
 		 */
 		private function cleanContent(content:Array):void {
-			__content.splice(0);
-			__lastTotals.splice(0);
+			_content.splice(0);
+			_lastTotals.splice(0);
 			
 			var badCount:uint = 0;
 			var i:uint;
@@ -148,14 +148,14 @@ package com.foomonger.utils {
 			for (i = 0; i < ilen; i++) {
 				try {
 					temp = content[i].bytesLoaded + content[i].bytesTotal;
-					__content.push(content[i]);
-					__lastTotals.push(0);
+					_content.push(content[i]);
+					_lastTotals.push(0);
 				} catch (err:Error) {
 					badCount++;
 				}
 			}
 			
-			if (__content.length > 0) {
+			if (_content.length > 0) {
 				if (badCount > 0) {
 					trace("**** WARNING **** LoadWatcher.start(): Found " + badCount.toString() + " bad objects.");
 				}
@@ -175,17 +175,17 @@ package com.foomonger.utils {
 			var partBytesTotal:uint = 0;
 			var partBytesLoaded:uint = 0;
 		
-			var validObjects:uint = __content.length;
+			var validObjects:uint = _content.length;
 	
 			var isValidTotal:Boolean = true;
 			
 			var i:uint;
 			var ilen:uint;
 			var part:Object;
-			ilen = __content.length;
+			ilen = _content.length;
 			
 			for (i = 0; i < ilen; i++) {
-				part = __content[i];
+				part = _content[i];
 			
 				partBytesLoaded = part.bytesLoaded;
 				if (isNaN(partBytesLoaded)) {
@@ -202,30 +202,30 @@ package com.foomonger.utils {
 				}
 				
 				// total will be invalid if a part's total bytes changes
-				if (__lastTotals[i] != partBytesTotal) {
+				if (_lastTotals[i] != partBytesTotal) {
 					isValidTotal = false;
 				}
-				__lastTotals[i] = partBytesTotal;
+				_lastTotals[i] = partBytesTotal;
 				
 				bytesTotal += partBytesTotal;
 				bytesLoaded += partBytesLoaded;
 			}
 			
-			__progressEvent.bytesLoaded = bytesLoaded;
-			__progressEvent.bytesTotal = bytesTotal;
-			__progressEvent.percent = ((validObjects / __content.length) * (bytesLoaded / bytesTotal));
-			__progressEvent.percent = isNaN(__progressEvent.percent) ? 0 : __progressEvent.percent;
+			_progressEvent.bytesLoaded = bytesLoaded;
+			_progressEvent.bytesTotal = bytesTotal;
+			_progressEvent.percent = ((validObjects / _content.length) * (bytesLoaded / bytesTotal));
+			_progressEvent.percent = isNaN(_progressEvent.percent) ? 0 : _progressEvent.percent;
 			
-			dispatchEvent(__progressEvent);
+			dispatchEvent(_progressEvent);
 
 			checkTimeout(bytesLoaded);
 	
 			if (isValidTotal) {
 				if (bytesLoaded == bytesTotal) {
-					__completeEvent.isTimedOut = false;
-					dispatchEvent(__completeEvent);
+					_completeEvent.isTimedOut = false;
+					dispatchEvent(_completeEvent);
 					stop();
-					Later.call(this, dispatchEvent, 1, false, __completeInitEvent);
+					Later.call(dispatchEvent, 1, false, _completeInitEvent);
 				}
 			}
 		}
@@ -236,24 +236,24 @@ package com.foomonger.utils {
 		 */
 		private function checkTimeout(bytesLoaded:uint):void {
 			// if bytes loaded hasn't changed
-			if (__lastOverallLoaded == bytesLoaded) {
+			if (_lastOverallLoaded == bytesLoaded) {
 				// if timeout timer is running
-				if (__isTimeoutRunning) {
+				if (_isTimeoutRunning) {
 					// do nothing
 				} else {
 					// set the timer
-					__isTimeoutRunning = true;
-					__timeoutCaller	= Later.call(this, callTimeout, __timeout, true);
+					_isTimeoutRunning = true;
+					_timeoutCaller	= Later.call(callTimeout, _timeout, true);
 				}
 			// if bytes loaded has changed
 			} else {
-				if (__isTimeoutRunning) {
+				if (_isTimeoutRunning) {
 					// clear the timer
-					__isTimeoutRunning = false;
-					Later.abort(__timeoutCaller);
+					_isTimeoutRunning = false;
+					Later.abortOperation(_timeoutCaller);
 				}
 			}
-			__lastOverallLoaded = bytesLoaded;
+			_lastOverallLoaded = bytesLoaded;
 		}
 
 		/**
@@ -262,8 +262,8 @@ package com.foomonger.utils {
 		 */
 		private function callTimeout():void {
 			stop();		
-			__completeEvent.isTimedOut = true;
-			dispatchEvent(__completeEvent);
+			_completeEvent.isTimedOut = true;
+			dispatchEvent(_completeEvent);
 		}	
 	}
 }
