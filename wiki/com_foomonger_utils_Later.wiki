@@ -1,79 +1,118 @@
-#summary Static class used to call functions after a given amount of time.  Available in AS2 and AS3.  Examples given in AS3.
-#labels Deprecated
+#summary Static class used to call functions after a given amount of time.  V2 Available in AS3 only.
+#labels Featured
 
-==Normal use:==
 {{{
-import com.foomonger.utils.Later;
+package {
 	
-function foo(bar:String):void {
-	trace("foo = " + bar);
-}
-Later.call(this, foo, 12, false, "hello 12 frames later");
-Later.call(this, foo, 2000, true, "hello 2000 milliseconds later");
-}}}
-
-==Simplest use:==
-{{{
-import com.foomonger.utils.Later;
-
-function foobar():void {
-	trace("foobar");
-}
-
-Later.call(this, foobar);	// runs foobar 1 frame later
-}}}
+	import com.foomonger.utils.Later;
+	import com.foomonger.utils.later.LaterOperation;
 	
-==Property setting use:==
-{{{
-import com.foomonger.utils.Later;
-	
-function traceBar():void {
-	trace("bar: " + bar);
+	import flash.display.Sprite;
+
+	public class LaterExamples extends Sprite {
+		
+		public function LaterExamples() {			
+			simpleExample();			
+			//finishExample();
+			//abortExample();
+			//simpleGroupExample();
+			//groupFinishAllExample();
+			//groupAbortAllExample();
+		}
+		
+		private function simpleExample():void {			
+			Later.call(trace, 50, false, "o");
+			Later.call(trace, 40, false, "l");
+			Later.call(trace, 30, false, "l");
+			Later.call(trace, 20, false, "e");
+			Later.call(trace, 10, false, "h");
+			
+			/*
+			outputs:
+				h
+				e
+				l
+				l
+				o
+			*/
+			
+		}
+				
+		private function finishExample():void {
+			var operation:LaterOperation;
+			
+			operation = Later.call(trace, 50, false, "o");
+			Later.call(trace, 40, false, "l");
+			Later.call(trace, 30, false, "l");
+			Later.call(trace, 20, false, "e");
+			Later.call(trace, 10, false, "h");
+			
+			Later.finishOperation(operation);
+			
+			/*
+			outputs:
+				o
+				h
+				e
+				l
+				l
+			*/
+		}
+		
+		private function abortExample():void {
+			var operation:LaterOperation;
+			
+			operation = Later.call(trace, 10, false, "hello");
+			Later.call(trace, 20, false, "world!");
+			
+			Later.abortOperation(operation);
+			
+			/*
+			outputs:
+				world!
+			*/
+		}
+		
+		private function simpleGroupExample():void {
+			var that:Object = new Object();
+			Later.getInstance(this).call(trace, 10, false, "hello");
+			Later.getInstance(that).call(trace, 20, false, "world");
+			Later.getInstance(that).call(trace, 25, false, "!");
+			/*
+			outputs:
+				hello
+				world
+				!
+			*/
+		}
+		
+		private function groupFinishAllExample():void {
+			var that:Object = new Object();
+			Later.getInstance(this).call(trace, 10, false, "hello");
+			Later.getInstance(that).call(trace, 20, false, "world");
+			Later.getInstance(that).call(trace, 25, false, "!");
+			Later.getInstance(that).finishAll();
+			/*
+			outputs:
+				world
+				!
+				hello				
+			*/
+		}
+		
+		private function groupAbortAllExample():void {
+			var that:Object = new Object();
+			Later.getInstance(this).call(trace, 10, false, "hello");
+			Later.getInstance(that).call(trace, 20, false, "world");
+			Later.getInstance(that).call(trace, 25, false, "!");
+			Later.getInstance(that).abortAll();
+			/*
+			outputs:
+				hello				
+			*/
+		}
+		
+	}
 }
 
-var bar:Number = 100;
-trace("bar: " + bar);				// outputs "bar: 100"
-Later.set(this, "bar", 50, 5, false);		// sets this.bar to 50 after 5 frames
-Later.call(this, traceBar, 10, false);		// outputs "bar: 50"
 }}}
-
-==Other features:==
-
-===To immediately call all functions sent to Later.call() do this:===
-{{{
-Later.finishAll();
-}}}
-
-===To immediately abort all functions sent to Later.call() do this:===
-{{{
-Later.abortAll();
-}}}
-
-===You can also control individual calls to Later.call() by saving the returned object:===
-{{{
-var laterObj:Object = Later.call(this, foo, 12, false, "hello 12 frames later");
-}}}
-	
-You can then pass the object to the following functions:
-{{{
-Later.abort(laterObj);
-Later.finish(laterObj);
-}}}
-
-===You can abort and finish Later calls by groups by using Later.gcall() and Later.gset().===
-The 5th argument in Later.gcall() is a uint that assigns a group to the Later object.
-Use Later.getUniqueGroup() to ensure unique group numbers.
-{{{
-import com.foomonger.utils.Later;
-
-function foo(bar:String):void {
-        trace(bar);
-}
-
-var myGroup:uint = Later.getUniqueGroup();
-Later.gcall(this, foo, 12, false, myGroup, "hello world");
-Later.gcall(this, foo, 13, false, myGroup, "hello world");
-Later.call(this, foo, 14, false, "hello moon");
-Later.abortGroup(myGroup);
-}}}
-This traces out only "hello moon".
