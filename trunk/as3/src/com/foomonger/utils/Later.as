@@ -1,91 +1,216 @@
 ﻿/*
 **********************************************************************************************
-* www.foomonger.com
-* Copyright 2007 Foomonger Development
-*
-* Later.as
-* Description:	Static class used to call functions after a given amount of time.
+foomonger.googlecode.com
+Copyright 2008 Foomonger Development
 **********************************************************************************************
-
-Normal use:
-	import com.foomonger.utils.Later;
-	
-	function foo(bar:String):void {
-		trace("foo = " + bar);
-	}
-	Later.call(this, foo, 12, false, "hello 12 frames later");
-	Later.call(this, foo, 2000, true, "hello 2000 milliseconds later");
-
-Simplest use:
-	import com.foomonger.utils.Later;
-	
-	function foobar():void {
-		trace("foobar");
-	}
-	
-	Later.call(this, foobar);	// runs foobar 1 frame later
-	
-Property setting use:
-	import com.foomonger.utils.Later;
-	
-	function traceBar():void {
-		trace("bar: " + bar);
-	}
-
-	var bar:Number = 100;
-	trace("bar: " + bar);						// outputs "bar: 100"
-	Later.set(this, "bar", 50, 5, false);		// sets this.bar to 50 after 5 frames
-	Later.call(this, traceBar, 10, false);		// outputs "bar: 50"
-	
-To immediately call all functions sent to Later.call() do this:
-	Later.finishAll();
-
-To immediately abort all functions sent to Later.call() do this:
-	Later.abortAll();
-
-You can also control individual calls to Later.call() by saving the returned object:
-	var laterObj:Object = Later.call(this, foo, 12, false, "hello 12 frames later");
-	
-You can then pass the object to the following functions:
-	Later.abort(laterObj);
-	Later.finish(later.Obj);
-
-You can abort and finish Later calls by groups by using Later.gcall() and Later.gset().
-	The 5th argument in Later.gcall() is a uint that assigns a group to the Later object.
-	Use Later.getUniqueGroup() to ensure unique group numbers.
-
-	import com.foomonger.utils.Later;
-	
-	function foo(bar:String):void {
-	        trace(bar);
-	}
-	
-	var myGroup:uint = Later.getUniqueGroup();
-	Later.gcall(this, foo, 12, false, myGroup, "hello world");
-	Later.gcall(this, foo, 13, false, myGroup, "hello world");
-	Later.call(this, foo, 14, false, "hello moon");
-	Later.abortGroup(myGroup);
-	
-	This traces out only "hello moon".
-	
 */
 
 package com.foomonger.utils {
 
-	import flash.display.MovieClip;
+	import com.foomonger.utils.later.LaterOperation;
+	
+	import flash.display.Sprite;
 	import flash.events.Event;
-	import flash.utils.setInterval;
-	import flash.utils.clearInterval;
+	import flash.utils.Dictionary;
+	import flash.utils.clearTimeout;
+	import flash.utils.setTimeout;
 	
 	public class Later {
 		
-		// class data vars
+		private static var _instances:Dictionary;
+		private static var _anonymousKey:Object;
 		
-		private static var __mc:MovieClip = new MovieClip();
-		private static var __secondsData:Object = new Object();				// associative array to keep track of functions that use seconds
-		private static var __framesData:Array = new Array();				// array to keep track of functions that use frames
-		private static var __isEnterFrameRunning:Boolean = false;			// true if there are frame based calls in progress
-		private static var __groupCounter:uint = 1;							// counter of group numbers; 0 reserved for default
+		private var _timeOperations:Dictionary;
+		private var _frameOperations:Dictionary;
+		private var _sprite:Sprite;
+
+		// --------------------------------------------------
+		//	static functions
+		// --------------------------------------------------
+		
+		public static function getInstance(key:Object = null):Later {			
+			if (key == null) {
+				if (_anonymousKey == null) {
+					_anonymousKey = new Object();
+				}
+				key = _anonymousKey;
+			}			
+			if (_instances == null) {
+				_instances = new Dictionary(true);
+			}			
+			if (_instances[key] == null) {
+				_instances[key] = new Later();
+			}			
+			return _instances[key] as Later;
+		}
+		
+		/**
+		 * Executes the given function after a number of seconds or frames.
+		 * 
+		 * @param  func Function to call.
+		 * @param duration Number of frames or milliseconds after which to call the given function.
+		 * @param useTime If true, duration equals milliseconds. If false, duration equals frames.
+		 * @param args Arguments to pass to the given function.
+		 * @return LaterOperation
+		 */
+		public static function call(func:Function, duration:uint = 1, useTime:Boolean = false, ... args):LaterOperation {
+			return Later.getInstance().call.apply(null, [func, duration, useTime].concat(args));
+		}
+		
+		/**
+		 * Sets the property of the given object to the given value after a number of seconds or frames.
+		 * 
+		 * @param object Object that contains the property to set.
+		 * @param propertyName Name of the property on the object to set.
+		 * @param value	Value to set the property to.
+		 * @param duration Number of frames or seconds after which to call the given function.
+		 * @param useTime If true, duration equals milliseconds. If false, duration equals frames.
+		 * @return LaterOperation
+		 */
+		public static function set(object:Object, propertyName:String, value:Object, duration:uint = 1, useTime:Boolean = false):LaterOperation {
+			return Later.getInstance().set.apply(null, [object, propertyName, value, duration, useTime]);
+		}
+		
+		/**
+		 * Immediately executes the given operation.
+		 * 
+		 * @param operation LaterOperation object to execute.
+		 * @param caller Pass arguments.callee from the calling function to prevent recursion.
+		 */
+		public static function finishOperation(operation:LaterOperation, caller:Function = null):void {
+			Later.getInstance().finishOperation(operation, caller);
+		}
+		
+		/**
+		 * Aborts the given LaterOperation
+		 * 
+		 * @param operation LaterOperation object to abort.
+		 */
+		public static function abortOperation(operation:LaterOperation):void {
+			Later.getInstance().abortOperation(operation);
+		}
+		
+		
+		// --------------------------------------------------
+		//	constructor
+		// --------------------------------------------------
+		
+		public function Later() {
+			_timeOperations = new Dictionary();
+			_frameOperations = new Dictionary();	
+			_sprite = new Sprite();
+		}
+		
+		
+		// --------------------------------------------------
+		//	public functions
+		// --------------------------------------------------
+		
+		/**
+		 * Executes the given function after a number of seconds or frames.
+		 * 
+		 * @param  func Function to call.
+		 * @param duration Number of frames or milliseconds after which to call the given function.
+		 * @param useTime If true, duration equals milliseconds. If false, duration equals frames.
+		 * @param args Arguments to pass to the given function.
+		 * @return LaterOperation
+		 */
+		public function call(func:Function, duration:uint = 1, useTime:Boolean = false, ... args):LaterOperation {
+			duration = Math.max(duration, 1);
+			
+			var operation:LaterOperation = new LaterOperation();
+			operation.useTime = useTime;
+			operation.func = func;
+			operation.duration = duration;
+			operation.args = args;
+			
+			if (useTime) {
+				operation.timeoutId = setTimeout(executeOperation, (duration), operation);
+				_timeOperations[operation] = operation;
+			} else {
+				_frameOperations[operation] = operation;
+				if (!_sprite.hasEventListener(Event.ENTER_FRAME)) {
+					_sprite.addEventListener(Event.ENTER_FRAME, onEnterFrame);
+				}
+			}
+			
+			return operation;
+		}
+		
+		
+		/**
+		 * Sets the property of the given object to the given value after a number of seconds or frames.
+		 * 
+		 * @param object Object that contains the property to set.
+		 * @param propertyName Name of the property on the object to set.
+		 * @param value	Value to set the property to.
+		 * @param duration Number of frames or milliseconds after which to call the given function.
+		 * @param useTime If true, duration equals milliseconds. If false, duration equals frames.
+		 * @return LaterOperation
+		 */
+		public function set(object:Object, propertyName:String, value:Object, duration:uint = 1, useTime:Boolean = false):LaterOperation {
+			return call(setObjectProperty, duration, useTime, object, propertyName, value);
+		}
+		
+		/**
+		 * Immediately executes the given operation.
+		 * 
+		 * @param operation LaterOperation object to execute.
+		 * @param caller Pass arguments.callee from the calling function to prevent recursion.
+		 */
+		public function finishOperation(operation:LaterOperation, caller:Function = null):void {
+			// if finish's caller was called by Later.call()
+			if (caller == operation.func) {
+				// avoid recursion, no need to do anything
+			} else {
+				executeOperation(operation);
+			}
+		}
+		
+		/**
+		 * Aborts the given LaterOperation
+		 * 
+		 * @param operation LaterOperation object to abort.
+		 */
+		public function abortOperation(operation:LaterOperation):void {
+			if (operation.useTime) {
+				clearTimeout(operation.timeoutId);
+				delete _timeOperations[operation];
+			} else {
+				delete _frameOperations[operation];
+			}
+		}
+		
+		/**
+		 * Immediately executes all operations.
+		 * 
+		 * @param caller Pass arguments.callee from the calling function to prevent recursion.
+		 */
+		public function finishAll(caller:Function = null):void {
+			var operation:LaterOperation;
+	
+			for each (operation in _timeOperations) {
+				finishOperation(operation, caller);
+			}			
+			for each (operation in _frameOperations) {
+				finishOperation(operation, caller);
+			}
+		}
+		
+		/**
+		 * Immediately aborts all operations.
+		 */
+		public function abortAll():void {
+			var operation:LaterOperation;
+	
+			for each (operation in _timeOperations) {
+				abortOperation(operation);
+			}			
+			for each (operation in _frameOperations) {
+				abortOperation(operation);
+			}
+		}
+		
 		
 		// --------------------------------------------------
 		//	private functions
@@ -93,311 +218,47 @@ package com.foomonger.utils {
 		
 		
 		/**
-		 *	Executes the later object function.
+		 * Executes the given LaterOperation.
 		 */
-		private static function executeFunction(laterObj:Object):void {
-			var obj:Object = laterObj.obj;
-			var func:Function = laterObj.func;
-			var args:Array = laterObj.args;
-			
-			if (func != null) {
-				try { 
-					func.apply(obj, args);
-				} catch(error:ArgumentError) {
-					trace(error);
-				}
-			}
-			
-			laterObj = null;
+		private function executeOperation(operation:LaterOperation):void {
+			try { 
+				operation.func.apply(null, operation.args);
+			} catch(e:Error) {
+				throw new Error("Error executing function called by Later. Original error message:" + e.message, e.errorID);
+			}			
+			abortOperation(operation);			
 		}
 		
-		/**
-		 *	Clears the later object that uses seconds.
-		 */
-		private static function clearSecondsFunction(laterObj:Object):void {
-			clearInterval(laterObj.intervalId);
-			var key:String = "id" + laterObj.intervalId.toString();
-			delete __secondsData[key];
-			laterObj = null;
-		}
-	
-		/**
-		 *	Clears the later object that uses frames.
-		 */
-		private static function clearFramesFunction(laterObj:Object):void {
-			laterObj.duration = 0;
-			laterObj.func = null;
-		}
 		
+		private static var framecounter:uint = 0;
 		/**
-		 *	Runs the given later object function and clears it.  Called by setInterval in Later.call() for functions that use seconds.
+		 * Loops through the LaterOperations that use frames and executes them as neccessary.
 		 */
-		private static function onInterval(laterObj:Object):void {
-			executeFunction(laterObj);
-			clearSecondsFunction(laterObj);
-		}
-		
-		/**
-		 *	Loops through the functions that use frames and execute them as neccessary.  Called by the enterFrame beacon.
-		 */
-		private static function onEnterFrame(event:Event):void {
-			var i:Number;
-			var ilen:Number;
-			var laterObj:Object;
-			
-			i = 0;
-			while (i < __framesData.length) {
-				laterObj = __framesData[i];
-				
-				if (laterObj.duration > 1) {
-					laterObj.duration--;
-					i++;
+		private function onEnterFrame(event:Event):void {			
+			for each (var operation:LaterOperation in _frameOperations) {				
+				if (operation.duration > 1) {
+					operation.duration--;
 				} else {
-					executeFunction(laterObj);
-					__framesData.splice(i, 1);
-				}
-			}		
-			
-			if (__framesData.length == 0) {
-				__isEnterFrameRunning = false;
-				__mc.removeEventListener(Event.ENTER_FRAME, onEnterFrame);
-			}
-		}
-		
-		/**
-		 *	Used by Later.set to set the property of an object.
-		 *	@param 		obj			Object where the property lives.
-		 *	@param 		prop		Property to set.
-		 *	@param		value		Value to set the property too.
-		 */
-		private static function setObjectProperty(obj:Object, prop:String, value:Object):void {
-			obj[prop] = value;
-		}
-		
-		// --------------------------------------------------
-		//	public functions
-		// --------------------------------------------------
-		
-		/**
-		 *	Main Later class function.  Executes the given function after a given amount of time.  Arguments can also be passed.
-		 *	@param 		obj			Object where the function lives.
-		 *	@param 		func		Function to call.
-		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
-		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@param		args		Array of arguments to pass to the given function.
-		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
-		 */
-		public static function call(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, ... args):Object {
-			var gcallArgs:Array = [obj, func, duration, useSeconds, 0].concat(args);
-			return Later.gcall.apply(Later, gcallArgs);
-		}
-
-		/**
-		 *	Same as Later.call(), except that you can pass a group number.
-		 *	@param 		obj			Object where the function lives.
-		 *	@param 		func		Function to call.
-		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
-		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@param		group		Group number to assign to the call.  Default = 0.		
-		 *	@param		args		Array of arguments to pass to the given function.
-		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
-		 */
-		public static function gcall(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
-
-			duration = Math.max(duration, 1);
-			
-			var laterObj:Object = new Object();
-			laterObj.useSeconds = useSeconds;
-			laterObj.obj = obj;
-			laterObj.func = func;
-			laterObj.group = group;
-			laterObj.args = args;
-			
-			if (useSeconds) {
-				laterObj.intervalId  = setInterval(Later.onInterval, duration, laterObj);
-				var key:String = "id" + laterObj.intervalId.toString();
-				__secondsData[key] = laterObj;
-			} else {
-				if (!__isEnterFrameRunning) {
-					__isEnterFrameRunning = true;
-					__mc.addEventListener(Event.ENTER_FRAME, onEnterFrame, false, 0, true);
-				}
-				laterObj.duration = duration;
-				__framesData.push(laterObj);
-			}
-			
-			return laterObj;
-		}
-		
-		/**
-		 *	@deprecated  Use Later.call() and Later.gcall() instead.
-		 *	Main Later class function.  Executes the given function after a given amount of time.  Arguments can also be passed.
-		 *	@param 		obj			Object where the function lives.
-		 *	@param 		func		Function to call.
-		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
-		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@param		group		Group number to assign to the call.  Default = 0.
-		 *	@param		args		Array of arguments to pass to the given function.
-		 *	@returns	Object		An object that represents the given function.  Can be saved and passed to finish() and abort()
-		 */
-		public static function exec(obj:Object, func:Function, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0, ... args):Object {
-			return Later.gcall.apply(Later, [obj, func, duration, useSeconds, group].concat(args));
-		}
-			
-		/**
-		 *	Set the given property with the given value after a given amount of time.
-		 *	@param 		obj			Object where the property lives.
-		 *	@param 		prop		Property to set.
-		 *	@param		value		Value to set the property too.
-		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
-		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
-		 */
-		public static function set(obj:Object, prop:String, value:Object, duration:uint = 1, useSeconds:Boolean = false):Object {
-			return Later.gset(obj, prop, value, duration, useSeconds, 0);
-		}
-		
-		/**
-		 *	Same as Later.set(), except that you can pass a group number.
-		 *	@param 		obj			Object where the property lives.
-		 *	@param 		prop		Property to set.
-		 *	@param		value		Value to set the property too.
-		 *	@param		duration	Number of frames or milliseconds after which to call the given function.
-		 *	@param		useSeconds	true = seconds, false = frames
-		 *	@param		group		Group number to assign to the call.  Default = 0.
-		 *	@returns	laterObj	An object that represents the given function.  Can be saved and passed to finish() and abort()
-		 */
-		public static function gset(obj:Object, prop:String, value:Object, duration:uint = 1, useSeconds:Boolean = false, group:uint = 0):Object {
-			return Later.gcall(Later, Later.setObjectProperty, duration, useSeconds, group, obj, prop, value);
-		}
-		
-		/**
-		 *	Immediately call the given later object.
-		 *	@param	laterObj	An object representing a function sent to Later.call().
-		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
-		 */
-		public static function finish(laterObj:Object, caller:Function = null):void {
-			// if finish's caller was called by Later.call()
-			if (caller == laterObj.func) {
-				// avoid recursion, no need to do anything
-			} else {
-				executeFunction(laterObj);
-			}
-			abort(laterObj);
-		}
-	
-		/**
-		 *	Immediately calls all functions sent to Later.call().
-		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
-		 */
-		public static function finishAll(caller:Function = null):void {
-			var laterObj:Object;
-	
-			// seconds
-			var name:String;
-			for (name in __secondsData) {
-				laterObj = __secondsData[name];
-				finish(laterObj, caller);
-			}
-	
-			// frames
-			var i:Number;
-			var ilen:Number = __framesData.length;
-			for (i = 0; i < ilen; i++) {
-				laterObj = __framesData[i];
-				finish(laterObj, caller);
-			}
-		}
-		
-		/**
-		 *	Immediately calls all functions sent to Later.gcall() in the given group.
-		 *	@param	group		The number of the group to finish.
-		 *	@param	caller		Pass arguments.callee from the calling function to prevent recursion.
-		 */
-		public static function finishGroup(group:uint, caller:Function = null):void {
-			var laterObj:Object;
-	
-			// seconds
-			var name:String;
-			for (name in __secondsData) {
-				laterObj = __secondsData[name];
-				if (laterObj.group == group) {
-					finish(laterObj, caller);
-				}
-			}
-	
-			// frames
-			var i:Number;
-			var ilen:Number = __framesData.length;
-			for (i = 0; i < ilen; i++) {
-				laterObj = __framesData[i];
-				if (laterObj.group == group) {
-					finish(laterObj, caller);
+					executeOperation(operation);
 				}
 			}
 		}
 		
 		/**
-		 *	Aborts the given later object.
-		 *	@param	laterObj	An object representing a function sent to Later.call().
+		 * Used by set() to set the property of an object.
+		 * 
+		 * @param object Object that contains the property to set.
+		 * @param propertyName Name of the property on the object to set.
+		 * @param value	Value to set the property to.
 		 */
-		public static function abort(laterObj:Object):void {
-			if (laterObj.useSeconds) {
-				clearSecondsFunction(laterObj);
-			} else {
-				clearFramesFunction(laterObj);
+		private function setObjectProperty(object:Object, propertyName:String, value:Object):void {
+			try {
+				object[propertyName] = value;
+			} catch (e:Error) {
+				throw new Error("Error setting object property. Original error message: " + e.message, e.errorID);
 			}
 		}
 		
-		/**
-		 *	Immediately aborts all functions sent to Later.call().
-		 */
-		public static function abortAll():void {		
-			var laterObj:Object;
-	
-			// seconds
-			var name:String;
-			for (name in __secondsData) {
-				laterObj = __secondsData[name];
-				abort(laterObj);
-			}
-			
-			// frames
-			__framesData.splice(0);	// dont need to loop and abort individually
-		}
-		
-		/**
-		 *	Immediately aborts all functions sent to Later.gcall() in the given group.
-		 *	@param	group		The number of the group to abort.
-		 */
-		public static function abortGroup(group:uint):void {		
-			var laterObj:Object;
-	
-			// seconds
-			var name:String;
-			for (name in __secondsData) {
-				laterObj = __secondsData[name];
-				if (laterObj.group == group) {
-					abort(laterObj);
-				}
-			}
-	
-			// frames
-			var i:Number;
-			var ilen:Number = __framesData.length;
-			for (i = 0; i < ilen; i++) {
-				laterObj = __framesData[i];
-				if (laterObj.group == group) {
-					abort(laterObj);
-				}
-			}
-		}
-		
-		/**
-		 *	Returns a unique group number.
-		 */
-		public static function getUniqueGroup():uint {
-			return __groupCounter++;
-		}
+				
 	}
 }
