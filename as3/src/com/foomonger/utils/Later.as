@@ -28,7 +28,7 @@ package com.foomonger.utils {
 		private var _sprite:Sprite;
 
 		// --------------------------------------------------
-		//	static functions
+		//	static methods
 		// --------------------------------------------------
 		
 		/**
@@ -114,7 +114,7 @@ package com.foomonger.utils {
 		
 		
 		// --------------------------------------------------
-		//	public functions
+		//	public methods
 		// --------------------------------------------------
 		
 		/**
@@ -224,7 +224,7 @@ package com.foomonger.utils {
 		
 		
 		// --------------------------------------------------
-		//	private functions
+		//	private methods
 		// --------------------------------------------------
 		
 		
