@@ -3,6 +3,8 @@
 
 Below is a class that shows some examples. It just calls traces, but add tween methods and you have extensive animation possibilities.
 
+For the v1 version of this page, click here: [com_foomonger_utils_Later_v1]
+
 {{{
 package {
 	
